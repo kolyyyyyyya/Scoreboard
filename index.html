@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0d1b2a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Scoreboard</title>
+<link rel="manifest" href='data:application/manifest+json,{"name":"Scoreboard","short_name":"Scoreboard","display":"standalone","orientation":"portrait","background_color":"%230d1b2a","theme_color":"%230d1b2a","start_url":"."}'>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230d1b2a'/%3E%3Ctext x='90' y='128' font-size='110' text-anchor='middle' fill='%23e8c547' font-family='Georgia'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0d1b2a;
+    --home: #2a6f97;
+    --home-lit: #61a5c2;
+    --away: #a23e48;
+    --away-lit: #d36b74;
+    --gold: #e8c547;
+    --ink: #f0f3f7;
+    --dim: rgba(240,243,247,0.55);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overscroll-behavior: none; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    user-select: none;
+  }
+  .board {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .team {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    min-height: 0;
+  }
+  .team:active { filter: brightness(1.15); }
+  .team.home { background: var(--home); }
+  .team.away { background: var(--away); }
+  .name {
+    position: absolute;
+    top: max(1.4vh, 14px);
+    font-size: clamp(1rem, 4.5vw, 1.6rem);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.85);
+    background: rgba(0,0,0,0.14);
+    padding: 6px 16px;
+    border-radius: 100px;
+    cursor: text;
+  }
+  .name:empty::before { content: attr(data-ph); color: rgba(255,255,255,0.5); }
+  .score {
+    font-family: 'Georgia', serif;
+    font-weight: 700;
+    font-size: clamp(5rem, 34vw, 16rem);
+    line-height: 0.9;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.35);
+  }
+  .tap-hint {
+    position: absolute;
+    bottom: max(1.4vh, 14px);
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+  }
+  .minus {
+    position: absolute;
+    bottom: max(1.2vh, 12px);
+    right: max(3vw, 18px);
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.45);
+    background: rgba(0,0,0,0.18);
+    color: #fff;
+    font-size: 1.6rem;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .minus:active { background: rgba(0,0,0,0.4); }
+  .bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px max(4vw, 18px);
+    background: #071320;
+    gap: 12px;
+  }
+  .bar .divider {
+    font-family: 'Georgia', serif;
+    font-size: 1.1rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+  }
+  .btn {
+    background: none;
+    border: 1px solid rgba(240,243,247,0.28);
+    color: var(--ink);
+    padding: 10px 18px;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .btn:active { background: rgba(240,243,247,0.1); }
+  .btn.reset { border-color: rgba(226,92,92,0.5); color: var(--away-lit); }
+  .btn.reset.armed { background: var(--away); border-color: var(--away); color: #fff; }
+</style>
+</head>
+<body>
+  <div class="board">
+    <div class="team home" id="homeTeam">
+      <div class="name" id="homeName" contenteditable="true" data-ph="Home"></div>
+      <div class="score" id="homeScore">0</div>
+      <div class="tap-hint">Tap to score</div>
+      <div class="minus" id="homeMinus">−</div>
+    </div>
+    <div class="team away" id="awayTeam">
+      <div class="name" id="awayName" contenteditable="true" data-ph="Away"></div>
+      <div class="score" id="awayScore">0</div>
+      <div class="tap-hint">Tap to score</div>
+      <div class="minus" id="awayMinus">−</div>
+    </div>
+  </div>
+  <div class="bar">
+    <button class="btn" id="stepBtn">+1</button>
+    <span class="divider" id="total">0 – 0</span>
+    <button class="btn reset" id="resetBtn">Reset</button>
+  </div>
+
+<script>
+  const state = { home: 0, away: 0, step: 1, homeName: '', awayName: '' };
+  const KEY = 'scoreboard.v1';
+  const steps = [1, 2, 3];
+
+  function load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY));
+      if (s) Object.assign(state, s);
+    } catch (e) {}
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  function render() {
+    homeScore.textContent = state.home;
+    awayScore.textContent = state.away;
+    total.textContent = state.home + ' – ' + state.away;
+    stepBtn.textContent = '+' + state.step;
+    if (document.activeElement !== homeName) homeName.textContent = state.homeName;
+    if (document.activeElement !== awayName) awayName.textContent = state.awayName;
+  }
+  function buzz() { if (navigator.vibrate) navigator.vibrate(12); }
+
+  function bindTeam(area, key, minusBtn) {
+    area.addEventListener('click', (e) => {
+      if (e.target.classList.contains('minus') || e.target.classList.contains('name')) return;
+      state[key] = Math.max(0, state[key] + state.step);
+      buzz(); save(); render();
+    });
+    minusBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state[key] = Math.max(0, state[key] - state.step);
+      buzz(); save(); render();
+    });
+  }
+  bindTeam(homeTeam, 'home', homeMinus);
+  bindTeam(awayTeam, 'away', awayMinus);
+
+  homeName.addEventListener('input', () => { state.homeName = homeName.textContent.trim(); save(); });
+  awayName.addEventListener('input', () => { state.awayName = awayName.textContent.trim(); save(); });
+  homeName.addEventListener('blur', () => { homeName.textContent = state.homeName; });
+  awayName.addEventListener('blur', () => { awayName.textContent = state.awayName; });
+
+  stepBtn.addEventListener('click', () => {
+    state.step = steps[(steps.indexOf(state.step) + 1) % steps.length];
+    save(); render();
+  });
+  let armTimer = null;
+  resetBtn.addEventListener('click', () => {
+    if (state.home === 0 && state.away === 0) return;
+    if (resetBtn.classList.contains('armed')) {
+      state.home = 0; state.away = 0;
+      buzz(); save(); render();
+      disarm();
+    } else {
+      resetBtn.classList.add('armed');
+      resetBtn.textContent = 'Sure?';
+      armTimer = setTimeout(disarm, 3000);
+    }
+  });
+  function disarm() {
+    clearTimeout(armTimer);
+    resetBtn.classList.remove('armed');
+    resetBtn.textContent = 'Reset';
+  }
+
+  document.addEventListener('dblclick', e => e.preventDefault());
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js');
+  }
+  load(); render();
+</script>
+</body>
+</html>
