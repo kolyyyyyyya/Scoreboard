@@ -1,4 +1,4 @@
-const CACHE = 'scoreboard-v2';
+const CACHE = 'scoreboard-v4';
 const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', (e) => {

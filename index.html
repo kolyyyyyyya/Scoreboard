@@ -13,17 +13,15 @@
 <style>
   :root {
     --bg: #0d1b2a;
-    --home: #2a6f97;
-    --home-lit: #61a5c2;
-    --away: #a23e48;
-    --away-lit: #d36b74;
     --gold: #e8c547;
     --ink: #f0f3f7;
-    --dim: rgba(240,243,247,0.55);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overscroll-behavior: none; }
   body {
+    position: fixed;
+    inset: 0;
+    width: 100%;
     background: var(--bg);
     color: var(--ink);
     font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -35,65 +33,63 @@
   }
   .board {
     flex: 1;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr;
     min-height: 0;
   }
+  .board.quad { grid-template-columns: 1fr 1fr; }
   .team {
-    flex: 1;
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.12s ease;
     min-height: 0;
+    min-width: 0;
   }
   .team:active { filter: brightness(1.15); }
-  .team.home { background: var(--home); }
-  .team.away { background: var(--away); }
+  .team[data-i="2"], .team[data-i="3"] { display: none; }
+  .board.quad .team[data-i="2"], .board.quad .team[data-i="3"] { display: flex; }
   .name {
     position: absolute;
-    top: max(1.4vh, 14px);
-    font-size: clamp(1rem, 4.5vw, 1.6rem);
+    top: max(1.2vh, 10px);
+    max-width: 86%;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: clamp(0.85rem, 3.8vw, 1.5rem);
     font-weight: 700;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: rgba(255,255,255,0.85);
     background: rgba(0,0,0,0.14);
-    padding: 6px 16px;
+    padding: 5px 14px;
     border-radius: 100px;
     cursor: text;
   }
+  .board.quad .name { font-size: clamp(0.75rem, 3vw, 1.1rem); }
   .name:empty::before { content: attr(data-ph); color: rgba(255,255,255,0.5); }
   .score {
     font-family: 'Georgia', serif;
     font-weight: 700;
-    font-size: clamp(5rem, 34vw, 16rem);
+    font-size: clamp(4rem, 30vw, 15rem);
     line-height: 0.9;
     font-variant-numeric: tabular-nums;
     color: #fff;
     text-shadow: 0 4px 24px rgba(0,0,0,0.35);
+    pointer-events: none;
   }
-  .tap-hint {
-    position: absolute;
-    bottom: max(1.4vh, 14px);
-    font-size: 0.72rem;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.5);
-  }
+  .board.quad .score { font-size: clamp(3rem, 18vw, 9rem); }
   .minus {
     position: absolute;
-    bottom: max(1.2vh, 12px);
-    right: max(3vw, 18px);
-    width: 46px; height: 46px;
+    bottom: max(1vh, 10px);
+    right: max(2.5vw, 12px);
+    width: 44px; height: 44px;
     border-radius: 50%;
     border: 1.5px solid rgba(255,255,255,0.45);
     background: rgba(0,0,0,0.18);
     color: #fff;
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     line-height: 1;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
@@ -104,106 +100,147 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px max(4vw, 18px);
+    padding: 10px max(3vw, 12px);
     background: #071320;
-    gap: 12px;
+    gap: 8px;
   }
   .bar .divider {
     font-family: 'Georgia', serif;
-    font-size: 1.1rem;
+    font-size: clamp(0.85rem, 3.6vw, 1.1rem);
     color: var(--gold);
-    letter-spacing: 0.1em;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
   .btn {
+    flex: 0 0 auto;
     background: none;
     border: 1px solid rgba(240,243,247,0.28);
     color: var(--ink);
-    padding: 10px 18px;
+    padding: 9px 14px;
     border-radius: 100px;
-    font-size: 0.8rem;
-    letter-spacing: 0.16em;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     cursor: pointer;
   }
   .btn:active { background: rgba(240,243,247,0.1); }
-  .btn.reset { border-color: rgba(226,92,92,0.5); color: var(--away-lit); }
-  .btn.reset.armed { background: var(--away); border-color: var(--away); color: #fff; }
+  .btn.reset { border-color: rgba(226,92,92,0.5); color: #d36b74; }
+  .btn.reset.armed { background: #a23e48; border-color: #a23e48; color: #fff; }
 </style>
 </head>
 <body>
-  <div class="board">
-    <div class="team home" id="homeTeam">
-      <div class="name" id="homeName" contenteditable="true" data-ph="Home"></div>
-      <div class="score" id="homeScore">0</div>
-      <div class="tap-hint">Tap to score</div>
-      <div class="minus" id="homeMinus">−</div>
-    </div>
-    <div class="team away" id="awayTeam">
-      <div class="name" id="awayName" contenteditable="true" data-ph="Away"></div>
-      <div class="score" id="awayScore">0</div>
-      <div class="tap-hint">Tap to score</div>
-      <div class="minus" id="awayMinus">−</div>
-    </div>
-  </div>
+  <div class="board" id="board"></div>
   <div class="bar">
     <button class="btn" id="stepBtn">+1</button>
-    <span class="divider" id="total">0 – 0</span>
+    <button class="btn" id="modeBtn">4 teams</button>
+    <span class="divider" id="total"></span>
     <button class="btn reset" id="resetBtn">Reset</button>
   </div>
 
 <script>
-  const state = { home: 0, away: 0, step: 1, homeName: '', awayName: '' };
-  const KEY = 'scoreboard.v1';
+  const COLORS = ['#2a6f97', '#a23e48', '#3a7d44', '#6d4c9f'];
+  const PLACEHOLDERS = ['Team 1', 'Team 2', 'Team 3', 'Team 4'];
+  const KEY = 'scoreboard.v2';
   const steps = [1, 2, 3];
+
+  const state = {
+    mode: 2,
+    step: 1,
+    teams: [
+      { score: 0, name: '' }, { score: 0, name: '' },
+      { score: 0, name: '' }, { score: 0, name: '' }
+    ]
+  };
 
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem(KEY));
-      if (s) Object.assign(state, s);
+      if (s && Array.isArray(s.teams) && s.teams.length === 4) Object.assign(state, s);
+      else {
+        // migrate from the old 2-team version
+        const old = JSON.parse(localStorage.getItem('scoreboard.v1'));
+        if (old) {
+          state.teams[0] = { score: old.home || 0, name: old.homeName || '' };
+          state.teams[1] = { score: old.away || 0, name: old.awayName || '' };
+          state.step = old.step || 1;
+        }
+      }
     } catch (e) {}
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
   }
-  function render() {
-    homeScore.textContent = state.home;
-    awayScore.textContent = state.away;
-    total.textContent = state.home + ' – ' + state.away;
-    stepBtn.textContent = '+' + state.step;
-    if (document.activeElement !== homeName) homeName.textContent = state.homeName;
-    if (document.activeElement !== awayName) awayName.textContent = state.awayName;
-  }
   function buzz() { if (navigator.vibrate) navigator.vibrate(12); }
+  function unstick() { window.scrollTo(0, 0); document.body.scrollTop = 0; }
+  function active() { return state.teams.slice(0, state.mode); }
 
-  function bindTeam(area, key, minusBtn) {
-    area.addEventListener('click', (e) => {
-      if (e.target.classList.contains('minus') || e.target.classList.contains('name')) return;
-      state[key] = Math.max(0, state[key] + state.step);
+  // Build the four panels once
+  const panels = [];
+  COLORS.forEach((color, i) => {
+    const el = document.createElement('div');
+    el.className = 'team';
+    el.dataset.i = i;
+    el.style.background = color;
+    el.innerHTML =
+      '<div class="name" contenteditable="true" data-ph="' + PLACEHOLDERS[i] + '"></div>' +
+      '<div class="score">0</div>' +
+      '<div class="minus">\u2212</div>';
+    board.appendChild(el);
+
+    const nameEl = el.querySelector('.name');
+    const scoreEl = el.querySelector('.score');
+    const minusEl = el.querySelector('.minus');
+    panels.push({ el, nameEl, scoreEl });
+
+    el.addEventListener('click', (e) => {
+      if (e.target === minusEl || e.target === nameEl) return;
+      state.teams[i].score = Math.max(0, state.teams[i].score + state.step);
       buzz(); save(); render();
     });
-    minusBtn.addEventListener('click', (e) => {
+    minusEl.addEventListener('click', (e) => {
       e.stopPropagation();
-      state[key] = Math.max(0, state[key] - state.step);
+      state.teams[i].score = Math.max(0, state.teams[i].score - state.step);
       buzz(); save(); render();
     });
-  }
-  bindTeam(homeTeam, 'home', homeMinus);
-  bindTeam(awayTeam, 'away', awayMinus);
+    nameEl.addEventListener('input', () => {
+      state.teams[i].name = nameEl.textContent.trim();
+      save();
+    });
+    nameEl.addEventListener('blur', () => {
+      nameEl.textContent = state.teams[i].name;
+      unstick();
+    });
+  });
 
-  homeName.addEventListener('input', () => { state.homeName = homeName.textContent.trim(); save(); });
-  awayName.addEventListener('input', () => { state.awayName = awayName.textContent.trim(); save(); });
-  homeName.addEventListener('blur', () => { homeName.textContent = state.homeName; });
-  awayName.addEventListener('blur', () => { awayName.textContent = state.awayName; });
+  function render() {
+    board.classList.toggle('quad', state.mode === 4);
+    panels.forEach((p, i) => {
+      p.scoreEl.textContent = state.teams[i].score;
+      if (document.activeElement !== p.nameEl) p.nameEl.textContent = state.teams[i].name;
+    });
+    total.textContent = active().map(t => t.score).join(' \u2013 ');
+    stepBtn.textContent = '+' + state.step;
+    modeBtn.textContent = state.mode === 2 ? '4 teams' : '2 teams';
+  }
 
   stepBtn.addEventListener('click', () => {
     state.step = steps[(steps.indexOf(state.step) + 1) % steps.length];
     save(); render();
   });
+
+  modeBtn.addEventListener('click', () => {
+    state.mode = state.mode === 2 ? 4 : 2;
+    buzz(); save(); render();
+  });
+
   let armTimer = null;
   resetBtn.addEventListener('click', () => {
-    if (state.home === 0 && state.away === 0) return;
+    if (active().every(t => t.score === 0)) return;
     if (resetBtn.classList.contains('armed')) {
-      state.home = 0; state.away = 0;
+      active().forEach(t => t.score = 0);
       buzz(); save(); render();
       disarm();
     } else {
@@ -218,6 +255,11 @@
     resetBtn.textContent = 'Reset';
   }
 
+  if (window.visualViewport) {
+    visualViewport.addEventListener('resize', () => {
+      if (!panels.some(p => document.activeElement === p.nameEl)) unstick();
+    });
+  }
   document.addEventListener('dblclick', e => e.preventDefault());
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js');
